@@ -19,6 +19,7 @@ Package.onUse(function(api) {
 
   api.mainModule("bigchaindb-collection.js");
 
+  api.export("BDBDriver");
   api.export("BDBConnection");
   api.export("BDBCollection");
 });
@@ -31,9 +32,10 @@ Package.onTest(function(api) {
 });
 
 Npm.depends({
-    "bigchaindb-driver": "3.2.0",
+    "bigchaindb-driver": "4.1.0",
     "bip39": "2.5.0",
-    "bufferutil": "3.0.3",
-    "utf-8-validate": "4.0.0",
-    "ws": "4.0.0"
+    "mkdirp": "0.5.1",
+    "bufferutil": "4.0.0",
+    "utf-8-validate": "5.0.1",
+    "ws": "6.0.0"
 });

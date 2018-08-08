@@ -1,7 +1,10 @@
 const BDBDriver = require("bigchaindb-driver");
+console.log("inside package bigchaindb-collection");
+console.log(BDBDriver);
 const WebSocket = require("ws");
-const bip39 = require("bip39");
+// const bip39 = require("bip39");
 
+export {BDBDriver}
 
 export class BDBConnection {
 	constructor(options = {}) {
@@ -166,7 +169,8 @@ export class BDBConnection {
 	}
 
 	keypairFromPassword(password) {
-		return new BDBDriver.Ed25519Keypair(bip39.mnemonicToSeed(password).slice(0, 32));
+		// return new BDBDriver.Ed25519Keypair(bip39.mnemonicToSeed(password).slice(0, 32));
+		return new Error('Error:', 'no keypair support...');
 	}
 
 	createTransaction(data, publicKey, privateKey, cb) {
@@ -257,6 +261,7 @@ export class BDBCollection extends Mongo.Collection {
 
 				self.bdbConnection.connection.postTransaction(txSigned).then(() => {
 					self.bdbConnection.connection.pollStatusAndFetchTransaction(txSigned.id).then((retrievedTx) => {
+						console.log("fetching transaction status");
 						self.update({ _id: payload._id }, { $set: { 
 							_assetId: retrievedTx.id,
 							_transactionId: retrievedTx.id,
