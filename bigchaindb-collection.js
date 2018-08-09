@@ -1,8 +1,7 @@
 const BDBDriver = require("bigchaindb-driver");
-console.log("inside package bigchaindb-collection");
-console.log(BDBDriver);
 const WebSocket = require("ws");
 // const bip39 = require("bip39");
+console.log("testing bigchaindb-collection package");
 
 export {BDBDriver}
 
@@ -32,6 +31,7 @@ export class BDBConnection {
 	}
 
 	connect(options = {}, cb) {
+		console.log("connecting to bigchain...");
 		var self = this;
 
 		if(options) {
@@ -87,6 +87,7 @@ export class BDBConnection {
 
 	listenEvents(cb) {
 		let self = this;
+		console.log('listening for events...');
 
 		try {
 			this.socket = new WebSocket(this.options.eventsUrl);
@@ -98,9 +99,12 @@ export class BDBConnection {
 			}
 			return;
 		}
+		// console.log(this.socket);
 
 		this.socket.onmessage = Meteor.bindEnvironment((e) => {
 			let data = {};
+			console.log("trying websocket");
+			// console.log(e.data);
 			try {
 				data = JSON.parse(e.data);
 			} catch(err) {
@@ -113,7 +117,9 @@ export class BDBConnection {
 			}
 
 			self.connection.getTransaction(data.transaction_id).then(Meteor.bindEnvironment((trans) => {
+				console.log("now we need to do stuff with transaction")
 				let record = trans && trans.asset && trans.asset.data ? trans.asset.data : null;
+				console.log(record);
 				if(record) {
 					let collection = null;
 					for(let key in self.collections) {
@@ -121,6 +127,7 @@ export class BDBConnection {
 						let nsField = coll._namespaceField;
 						let ns = coll.getNamespace();
 						if(record[nsField] == ns) {
+							console.log("match with registered collection");
 							collection = coll;
 							break;
 						}
@@ -128,6 +135,10 @@ export class BDBConnection {
 
 					if(collection) {
 						let found = collection.findOne({ $or: [ { _id: record._id }, { _assetId: trans.id } ] });
+						console.log("did we find a record to match?");
+						console.log(typeof found !== "undefined");
+						// Add the asset to the local mongo collectino to sync with chain
+						// if it does not exist
 						if(!found) {
 							record._assetId = trans.id;
 							record._transactionId = trans.id;
@@ -259,15 +270,36 @@ export class BDBCollection extends Mongo.Collection {
 
 				const txSigned = BDBDriver.Transaction.signTransaction(tx, keypair.privateKey);
 
-				self.bdbConnection.connection.postTransaction(txSigned).then(() => {
-					self.bdbConnection.connection.pollStatusAndFetchTransaction(txSigned.id).then((retrievedTx) => {
-						console.log("fetching transaction status");
-						self.update({ _id: payload._id }, { $set: { 
-							_assetId: retrievedTx.id,
-							_transactionId: retrievedTx.id,
-							_transactionStatus: "ok"
-						} });
-					});
+				self.bdbConnection.connection.postTransactionCommit(txSigned).then((res) => {
+					console.log("posted the transaction to the commit(?)");
+					console.log(txSigned.id);
+					console.log(res.id);
+					console.log(payload._id);
+					// var tempres = self.findOne(payload._id);
+					console.log("existing record");
+					// console.log(typeof tempres !== "undefined");
+					console.log(self.update);
+
+					self.update({ _id: payload._id }, { $set: { 
+						_assetId: res.id,
+						_transactionId: res.id,
+						_transactionStatus: "ok"
+					} });
+
+					// Changes in api
+					// http://docs.bigchaindb.com/projects/js-driver/en/latest/readme.html
+					// "the JS driver does not have anymore the pollStatusAndFetchTransaction() method as there are three different ways of posting a transaction:"
+					// TODO: Below is not fully working... takes txSigned instead of txSigned.id(?)
+					// NOTE: Maybe this is not necessary with new API?
+					// self.bdbConnection.connection.postTransactionSync(txSigned).then((retrievedTx) => {
+					// 	console.log("fetching transaction status");
+					// 	console.log(retrievedTx);
+					// 	self.update({ _id: payload._id }, { $set: { 
+					// 		_assetId: retrievedTx.id,
+					// 		_transactionId: retrievedTx.id,
+					// 		_transactionStatus: "ok"
+					// 	} });
+					// });
 				});
 			});
 		}
