@@ -117,9 +117,10 @@ export class BDBConnection {
 			}
 
 			self.connection.getTransaction(data.transaction_id).then(Meteor.bindEnvironment((trans) => {
-				console.log("now we need to do stuff with transaction")
+				// TODO: This is not returning an actual record?!
+				// console.log("now we need to do stuff with transaction")
 				let record = trans && trans.asset && trans.asset.data ? trans.asset.data : null;
-				console.log(record);
+				// console.log(trans);
 				if(record) {
 					let collection = null;
 					for(let key in self.collections) {
@@ -135,8 +136,8 @@ export class BDBConnection {
 
 					if(collection) {
 						let found = collection.findOne({ $or: [ { _id: record._id }, { _assetId: trans.id } ] });
-						console.log("did we find a record to match?");
-						console.log(typeof found !== "undefined");
+						// console.log("did we find a record to match?");
+						// console.log(typeof found !== "undefined");
 						// Add the asset to the local mongo collectino to sync with chain
 						// if it does not exist
 						if(!found) {
@@ -197,6 +198,7 @@ export class BDBConnection {
 
 		const txSigned = BDBDriver.Transaction.signTransaction(tx, privateKey);
 
+		// TODO: This needs to be changed because of new API version, as below.
 		self.connection.postTransaction(txSigned).then(() => {
 			self.connection.pollStatusAndFetchTransaction(txSigned.id).then((retrievedTx) => {
 				if(cb) {
@@ -280,16 +282,17 @@ export class BDBCollection extends Mongo.Collection {
 					// console.log(typeof tempres !== "undefined");
 					console.log(self.update);
 
-					self.update({ _id: payload._id }, { $set: { 
+					var res = self.update({ _id: payload._id }, { $set: { 
 						_assetId: res.id,
 						_transactionId: res.id,
 						_transactionStatus: "ok"
 					} });
+					console.log(res);
 
 					// Changes in api
 					// http://docs.bigchaindb.com/projects/js-driver/en/latest/readme.html
 					// "the JS driver does not have anymore the pollStatusAndFetchTransaction() method as there are three different ways of posting a transaction:"
-					// TODO: Below is not fully working... takes txSigned instead of txSigned.id(?)
+					// TODO: Below is deprectated... 
 					// NOTE: Maybe this is not necessary with new API?
 					// self.bdbConnection.connection.postTransactionSync(txSigned).then((retrievedTx) => {
 					// 	console.log("fetching transaction status");
