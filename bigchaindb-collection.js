@@ -87,7 +87,7 @@ export class BDBConnection {
 
 	listenEvents(cb) {
 		let self = this;
-		console.log('listening for events...');
+		// console.log('listening for events...');
 
 		try {
 			this.socket = new WebSocket(this.options.eventsUrl);
